@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+.envrc
+.mcp.json
+reports/
+logs/
+*.egg-info/
+dist/
+build/
+_upstream/
+.claude/
+.DS_Store
