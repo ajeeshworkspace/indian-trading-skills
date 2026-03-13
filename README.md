@@ -1,6 +1,6 @@
 # Indian Trading Skills for Claude
 
-> Turn Claude into your Indian market research analyst. 9 specialized skills covering NSE/BSE equities, F&O derivatives, institutional flows, market breadth, and live news tracking — all built for Indian markets.
+> Turn Claude into your Indian market research analyst. 10 specialized skills covering NSE/BSE equities, F&O derivatives, institutional flows, market breadth, live news tracking, and weekly trade planning — all built for Indian markets.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
@@ -200,7 +200,7 @@ Fetches, categorizes, and scores Indian market news from MoneyControl, Economic 
 
 **7 modes:** Daily Briefing, Stock-Specific News, Sector Roundup, Earnings Tracker, Corporate Actions, Bulk/Block Deals, Regulatory Monitor.
 
-**Standalone CLI usage:**
+**Standalone CLI usage (News Tracker):**
 ```bash
 # Daily briefing from all sources
 python3 skills/india-news-tracker/scripts/news_fetcher.py
@@ -219,6 +219,25 @@ python3 skills/india-news-tracker/scripts/news_fetcher.py --format json --output
 ```
 
 **Auto-feeds other skills:** Headlines → Scenario Analyzer, Earnings → Stock Analysis, FII activity → Flow Tracker, Sector signals → Market Breadth.
+
+### 10. Weekly F&O Trade Planner
+Complete weekly F&O trading workflow — from macro thesis to position management. Combines news analysis, sector screening, technical confirmation, OI data, and FII/DII flows to generate a single high-conviction directional trade idea each week, then manages it with structured stop-loss tightening and partial profit booking.
+
+| | |
+|---|---|
+| **Trigger** | "Plan my F&O trade for next week", "What should I trade this week?", "Weekly trade idea" |
+| **Output** | Trade Card (instrument, direction, strike, entry, SL, targets), then ongoing position management |
+| **Data** | Groww MCP or Zerodha Kite MCP (live) + Web search (news, FII/DII) |
+
+**6-phase workflow:**
+1. **News & Macro Scan** — identify the dominant market narrative, rate conviction 1-5
+2. **Sector & Instrument ID** — screen movers, FII/DII flows, narrow to ONE instrument
+3. **Direction & Technical Confirmation** — RSI, MACD, SuperTrend, OI analysis (need 4+ signals aligned)
+4. **Strategy & Entry Plan** — select strategy based on conviction + IV, generate Trade Card with exact levels
+5. **Execution** — place orders with GTT stop-loss and profit targets
+6. **Position Management** — daily monitoring, SL tightening ladder, partial profit booking (40-50% at T1, 30% at T2, trail rest)
+
+**Built-in risk rules:** Max 40% capital per trade, mandatory GTT stop-loss, weekend exit rule for weekly expiry, no averaging down, orphaned GTT cleanup after every exit.
 
 ## Project Structure
 
@@ -263,11 +282,13 @@ indian-trading-skills/
     │   ├── SKILL.md
     │   ├── references/breadth_methodology.md
     │   └── assets/breadth_report_template.md
-    └── india-news-tracker/
-        ├── SKILL.md
-        ├── references/{news_source_guide, sector_mapping, sentiment_patterns}.md
-        ├── scripts/news_fetcher.py
-        └── assets/daily_briefing_template.md
+    ├── india-news-tracker/
+    │   ├── SKILL.md
+    │   ├── references/{news_source_guide, sector_mapping, sentiment_patterns}.md
+    │   ├── scripts/news_fetcher.py
+    │   └── assets/daily_briefing_template.md
+    └── weekly-fno-trade-planner/
+        └── SKILL.md
 ```
 
 ## Broker Integration
@@ -347,7 +368,7 @@ Groww MCP is available as a connector in Claude. Connect it from the MCP connect
 
 Contributions welcome! Some ideas:
 
-- **New skills**: CANSLIM screener, promoter pledge monitor, IPO analyzer, F&O ban monitor
+- **New skills**: CANSLIM screener, promoter pledge monitor, IPO analyzer, F&O ban monitor, trade journal/dashboard
 - **Enhancements**: Tests for existing calculators, more sector-specific analysis frameworks
 - **Data sources**: Additional free data integrations (NSE API, BSE API)
 - **Documentation**: Usage examples, video walkthroughs
