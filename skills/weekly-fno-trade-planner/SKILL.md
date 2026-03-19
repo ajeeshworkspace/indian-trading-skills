@@ -278,6 +278,128 @@ Max Loss:   ₹{max_loss} ({%} of capital)
 
 ---
 
+## Phase 4.5: Gap Probability & Immediate Entry Decision
+
+### Goal
+When analysis is run DURING MARKET HOURS or AFTER MARKET CLOSE (post 3:30 PM), assess
+whether the next trading day is likely to see a significant gap-up or gap-down. If high
+probability, **recommend IMMEDIATE entry** before close — do NOT defer to next morning.
+
+**THIS IS THE MOST CRITICAL PHASE FOR MULTIPLIED PROFITS.** Buying OTM options before a
+gap is 2-5x cheaper than buying after the gap opens. Missing this window is the single
+biggest profit killer for retail F&O traders.
+
+### When to Trigger This Phase
+
+- **Always** when running the skill after 2:00 PM on a trading day
+- **Always** when running the skill after market close (post 3:30 PM)
+- **Always** when conviction is >= 4 and direction is clear
+- **Always** when an active geopolitical/macro crisis is ongoing
+
+### Steps
+
+1. **Check GIFT Nifty / SGX Nifty (after hours)**:
+```
+WebSearch: "GIFT Nifty live today {current_date}"
+WebSearch: "SGX Nifty futures {current_date} evening"
+```
+   - GIFT Nifty trading > 100 pts below close = **high gap-down probability**
+   - GIFT Nifty trading > 100 pts above close = **high gap-up probability**
+
+2. **Check overnight global cues**:
+```
+WebSearch: "US futures S&P Nasdaq live {current_date}"
+WebSearch: "Asian markets Japan China {current_date} evening"
+WebSearch: "crude oil price Brent live tonight {current_date}"
+```
+   - US futures down > 1% = gap-down signal
+   - Brent crude spike > 3% overnight = strong gap-down for India
+   - Asian markets deep red = confirms gap-down
+
+3. **Check overnight news catalysts**:
+```
+WebSearch: "{active_crisis} latest news tonight {current_date}"
+WebSearch: "breaking news global markets after hours {current_date}"
+```
+   - New escalation in active crisis = gap accelerator
+   - De-escalation / ceasefire = reverse gap
+
+4. **Calculate Gap Probability Score**:
+
+| Factor | Bearish Gap | Bullish Gap |
+|--------|-------------|-------------|
+| GIFT Nifty > 100 pts below close | +30% | — |
+| GIFT Nifty > 200 pts below close | +50% | — |
+| US futures down > 1% | +15% | — |
+| Brent crude up > 3% overnight | +20% | — |
+| Active geopolitical crisis escalating | +20% | — |
+| FII selling > ₹3,000 cr today | +10% | — |
+| GIFT Nifty > 100 pts above close | — | +30% |
+| GIFT Nifty > 200 pts above close | — | +50% |
+| US futures up > 1% | — | +15% |
+| Ceasefire / de-escalation news | — | +25% |
+| FII buying > ₹2,000 cr today | — | +10% |
+
+**Score > 60% = HIGH probability gap. RECOMMEND IMMEDIATE ENTRY.**
+
+5. **Immediate Entry vs Wait Decision**:
+
+| Gap Probability | Time | Action |
+|----------------|------|--------|
+| **> 60%** | **Before 3:15 PM** | **BUY NOW. Do not wait for tomorrow.** |
+| **> 60%** | **After 3:30 PM** | **Alert user: Buy at 9:15 AM tomorrow. Pre-set limit order.** |
+| 40-60% | Any | Buy half position now, half at open |
+| < 40% | Any | Wait for confirmation at open |
+
+6. **Pre-Gap Strike Selection** (DIFFERENT from regular entry):
+   When buying BEFORE a gap, select strikes that are currently **2-4 strikes OTM**:
+   - These are cheap (₹50-150 range) = maximum leverage
+   - After the gap, they become ATM or slightly OTM = premium explodes
+   - Buy MORE lots of cheaper OTM options for max profit on the gap
+   - **This is the "lottery ticket" entry** — high R:R, limited downside
+
+   Example (Bearish gap expected):
+   - Nifty at 23,778 → Buy 23,000 PE at ₹109 (778 pts OTM)
+   - Next day gap to 23,200 → 23,000 PE jumps to ₹250+ (130% overnight gain)
+   - 6 lots × 65 × ₹141 profit = ₹55,000 on ₹42,500 invested
+
+7. **Output: Immediate Entry Alert**:
+
+```
+🚨 GAP ALERT — {DIRECTION} GAP EXPECTED TOMORROW
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Gap Probability: {score}%
+GIFT Nifty:      {level} ({change} from close)
+Key Catalyst:    {reason}
+
+⚡ IMMEDIATE ENTRY RECOMMENDED — BUY BEFORE CLOSE
+Strategy:   Buy {strike} {CE/PE} {expiry} (currently {X} pts OTM)
+Premium:    ₹{cheap_price} per unit
+Lots:       {max_lots} lots in ₹{budget}
+Cost:       ₹{total_cost}
+
+Expected tomorrow open: ₹{estimated_premium} (+{%} overnight)
+Expected profit:        ₹{overnight_profit}
+
+vs. buying AFTER gap:   Premium will be ₹{expensive_price}
+                        You'd get {fewer_lots} lots for same ₹{budget}
+                        Profit potential: {reduced}% lower
+
+⏰ WINDOW: Buy before 3:15 PM today
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+### Critical Rules for Pre-Gap Entry
+
+1. **Only with conviction >= 4** — Don't gamble on uncertain gaps
+2. **Max 40% of capital** — Even with high conviction, respect position limits
+3. **Always use monthly expiry** for pre-gap entries — gives time if gap is delayed
+4. **Set SL immediately** — Pre-gap entries can go wrong (gap doesn't materialize)
+5. **If gap doesn't happen next day** — Hold if thesis is intact, exit if thesis breaks
+6. **Don't chase if you miss the window** — Post-gap premiums are 2-3x, reduce lots
+
+---
+
 ## Phase 5: Execution
 
 ### Goal
@@ -508,10 +630,27 @@ place_order(
 | Day | Activity |
 |-----|----------|
 | **Sunday evening** | Phase 1-4: Full analysis, generate Trade Card |
-| **Monday morning** | Phase 5: Execute if setup confirms at open |
-| **Mon-Thu** | Phase 6: Daily monitoring, SL tightening, partial exits |
+| **Monday 9:00 AM** | Phase 4.5: Check GIFT Nifty, assess gap probability |
+| **Monday 9:00-9:15** | Phase 5: Execute if setup confirms (pre-open or at open) |
+| **Mon-Thu (market hours)** | Phase 6: Daily monitoring, SL tightening, partial exits |
+| **Mon-Thu (post 3 PM)** | **Phase 4.5: ALWAYS check for next-day gap opportunity** |
+| **Mon-Thu (after close)** | Phase 4.5: Check GIFT Nifty + overnight cues for gap alert |
 | **Friday** | Decision: Exit before weekend or hold (apply weekend rule) |
 | **Weekend** | Review, journal, prepare next week's analysis |
+
+### IMPORTANT: Evening Workflow (The Edge)
+
+Every trading day after 2:30 PM or after market close, if an active position thesis exists
+or macro conviction >= 3, the skill MUST run Phase 4.5 to check for overnight gap opportunities.
+
+**The #1 profit multiplier in F&O is buying BEFORE the gap, not AFTER.**
+
+If the user invokes this skill in the evening / after hours:
+1. Skip Phases 1-3 if thesis is already established
+2. Go DIRECTLY to Phase 4.5 (Gap Probability)
+3. If gap score > 60%, issue Immediate Entry Alert
+4. **NEVER say "wait for tomorrow" when gap probability is high and market is still open**
+5. If market is closed, alert user to set pre-market limit order or buy at 9:15 sharp
 
 ---
 
