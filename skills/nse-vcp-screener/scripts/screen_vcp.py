@@ -29,27 +29,42 @@ from scorer import calculate_composite_score
 from report_generator import generate_reports
 
 
-NIFTY500_CSV_URL = "https://www.niftyindices.com/IndexConstituent/ind_nifty500list.csv"
+INDEX_CSV_FILES = {
+    "nifty50": "ind_nifty50list.csv",
+    "nifty200": "ind_nifty200list.csv",
+    "nifty500": "ind_nifty500list.csv",
+}
+INDEX_CSV_HOSTS = [
+    "https://www.niftyindices.com/IndexConstituent/",
+    # mirror — niftyindices.com intermittently rate-limits/hangs
+    "https://nsearchives.nseindia.com/content/indices/",
+]
 
 
-def fetch_nifty500_from_csv() -> list[str]:
-    """Fetch Nifty 500 constituents from the official niftyindices.com CSV."""
+def fetch_index_from_csv(universe: str) -> list[str]:
+    """Fetch official index constituents (niftyindices.com; NSE archives mirror fallback)."""
     import io
     import urllib.request
 
-    # niftyindices.com rejects requests without a browser User-Agent
-    req = urllib.request.Request(
-        NIFTY500_CSV_URL,
-        headers={
-            "User-Agent": (
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
-            )
-        },
-    )
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        df = pd.read_csv(io.BytesIO(resp.read()))
-    return [f"{s.strip().upper()}.NS" for s in df["Symbol"].dropna()]
+    last_err: Exception = RuntimeError("no CSV host configured")
+    for host in INDEX_CSV_HOSTS:
+        # both hosts reject requests without a browser User-Agent
+        req = urllib.request.Request(
+            host + INDEX_CSV_FILES[universe],
+            headers={
+                "User-Agent": (
+                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+                )
+            },
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                df = pd.read_csv(io.BytesIO(resp.read()))
+            return [f"{s.strip().upper()}.NS" for s in df["Symbol"].dropna()]
+        except Exception as e:  # noqa: BLE001 — try the mirror before giving up
+            last_err = e
+    raise last_err
 
 
 def get_universe(universe: str, custom_tickers: str | None = None) -> list[str]:
@@ -58,14 +73,15 @@ def get_universe(universe: str, custom_tickers: str | None = None) -> list[str]:
         tickers = [t.strip().upper() for t in custom_tickers.split(",")]
         return [f"{t}.NS" for t in tickers if t]
 
-    # Nifty 500: prefer the official constituent CSV. The niftystocks package
-    # bundles a hardcoded snapshot that has drifted badly — only ~60% of its
-    # names were still in the index as of 2026-07.
-    if universe == "nifty500":
+    # Prefer the official constituent CSVs for every standard universe. The
+    # niftystocks package bundles hardcoded snapshots that have drifted badly:
+    # as of 2026-07 only ~60% of its Nifty 500 names and 134/200 of its
+    # Nifty 200 names were still in the respective index.
+    if universe in INDEX_CSV_FILES:
         try:
-            return fetch_nifty500_from_csv()
+            return fetch_index_from_csv(universe)
         except Exception as e:
-            print(f"Warning: niftyindices.com CSV fetch failed ({e}). Trying niftystocks.", file=sys.stderr)
+            print(f"Warning: official CSV fetch failed ({e}). Trying niftystocks.", file=sys.stderr)
 
     try:
         from niftystocks import ns
