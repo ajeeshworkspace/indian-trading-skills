@@ -29,11 +29,43 @@ from scorer import calculate_composite_score
 from report_generator import generate_reports
 
 
+NIFTY500_CSV_URL = "https://www.niftyindices.com/IndexConstituent/ind_nifty500list.csv"
+
+
+def fetch_nifty500_from_csv() -> list[str]:
+    """Fetch Nifty 500 constituents from the official niftyindices.com CSV."""
+    import io
+    import urllib.request
+
+    # niftyindices.com rejects requests without a browser User-Agent
+    req = urllib.request.Request(
+        NIFTY500_CSV_URL,
+        headers={
+            "User-Agent": (
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+            )
+        },
+    )
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        df = pd.read_csv(io.BytesIO(resp.read()))
+    return [f"{s.strip().upper()}.NS" for s in df["Symbol"].dropna()]
+
+
 def get_universe(universe: str, custom_tickers: str | None = None) -> list[str]:
     """Get stock universe tickers in yfinance format (.NS suffix)."""
     if universe == "custom" and custom_tickers:
         tickers = [t.strip().upper() for t in custom_tickers.split(",")]
         return [f"{t}.NS" for t in tickers if t]
+
+    # Nifty 500: prefer the official constituent CSV. The niftystocks package
+    # bundles a hardcoded snapshot that has drifted badly — only ~60% of its
+    # names were still in the index as of 2026-07.
+    if universe == "nifty500":
+        try:
+            return fetch_nifty500_from_csv()
+        except Exception as e:
+            print(f"Warning: niftyindices.com CSV fetch failed ({e}). Trying niftystocks.", file=sys.stderr)
 
     try:
         from niftystocks import ns
@@ -43,25 +75,27 @@ def get_universe(universe: str, custom_tickers: str | None = None) -> list[str]:
         elif universe == "nifty200":
             return ns.get_nifty200_with_ns()
         elif universe == "nifty500":
-            return ns.get_nifty_total_market_with_ns()
+            return ns.get_nifty500_with_ns()
         else:
             return ns.get_nifty50_with_ns()
-    except ImportError:
-        # Fallback: Nifty 50 hardcoded core components
-        print("Warning: niftystocks package not available. Using hardcoded Nifty 50 list.", file=sys.stderr)
-        nifty50_core = [
-            "RELIANCE", "TCS", "HDFCBANK", "INFY", "ICICIBANK",
-            "BHARTIARTL", "ITC", "SBIN", "LT", "KOTAKBANK",
-            "HINDUNILVR", "AXISBANK", "BAJFINANCE", "MARUTI", "TATAMOTORS",
-            "SUNPHARMA", "TITAN", "HCLTECH", "NTPC", "POWERGRID",
-            "ULTRACEMCO", "ADANIENT", "ASIANPAINT", "TATASTEEL", "WIPRO",
-            "ONGC", "JSWSTEEL", "COALINDIA", "NESTLEIND", "BAJAJFINSV",
-            "M&M", "TECHM", "DRREDDY", "CIPLA", "EICHERMOT",
-            "APOLLOHOSP", "DIVISLAB", "BRITANNIA", "HEROMOTOCO", "INDUSINDBK",
-            "TATACONSUM", "HDFCLIFE", "SBILIFE", "BAJAJ-AUTO", "GRASIM",
-            "BPCL", "ADANIPORTS", "HINDALCO", "BEL", "TRENT",
-        ]
-        return [f"{t}.NS" for t in nifty50_core]
+    except Exception as e:
+        print(f"Warning: niftystocks universe fetch failed ({e}).", file=sys.stderr)
+
+    # Fallback: Nifty 50 hardcoded core components
+    print("Warning: falling back to hardcoded Nifty 50 list.", file=sys.stderr)
+    nifty50_core = [
+        "RELIANCE", "TCS", "HDFCBANK", "INFY", "ICICIBANK",
+        "BHARTIARTL", "ITC", "SBIN", "LT", "KOTAKBANK",
+        "HINDUNILVR", "AXISBANK", "BAJFINANCE", "MARUTI", "TATAMOTORS",
+        "SUNPHARMA", "TITAN", "HCLTECH", "NTPC", "POWERGRID",
+        "ULTRACEMCO", "ADANIENT", "ASIANPAINT", "TATASTEEL", "WIPRO",
+        "ONGC", "JSWSTEEL", "COALINDIA", "NESTLEIND", "BAJAJFINSV",
+        "M&M", "TECHM", "DRREDDY", "CIPLA", "EICHERMOT",
+        "APOLLOHOSP", "DIVISLAB", "BRITANNIA", "HEROMOTOCO", "INDUSINDBK",
+        "TATACONSUM", "HDFCLIFE", "SBILIFE", "BAJAJ-AUTO", "GRASIM",
+        "BPCL", "ADANIPORTS", "HINDALCO", "BEL", "TRENT",
+    ]
+    return [f"{t}.NS" for t in nifty50_core]
 
 
 def fetch_benchmark(period: str = "1y") -> pd.DataFrame:
