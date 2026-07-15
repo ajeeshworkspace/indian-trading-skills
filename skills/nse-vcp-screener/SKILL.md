@@ -16,7 +16,7 @@ The screening pipeline has 3 phases:
 
 ## Data Source
 
-This screener uses **yfinance** with `.NS` suffix for NSE stocks and the **niftystocks** package for stock universe lists. No paid API keys required.
+This screener uses **yfinance** with `.NS` suffix for NSE stocks. Universe lists come from the **niftystocks** package; for `nifty500` the official niftyindices.com constituent CSV is preferred (the bundled niftystocks list is a stale snapshot), with niftystocks as fallback. No paid API keys required.
 
 ## Execution
 

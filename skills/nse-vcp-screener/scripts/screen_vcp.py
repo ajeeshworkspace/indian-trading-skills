@@ -29,11 +29,59 @@ from scorer import calculate_composite_score
 from report_generator import generate_reports
 
 
+INDEX_CSV_FILES = {
+    "nifty50": "ind_nifty50list.csv",
+    "nifty200": "ind_nifty200list.csv",
+    "nifty500": "ind_nifty500list.csv",
+}
+INDEX_CSV_HOSTS = [
+    "https://www.niftyindices.com/IndexConstituent/",
+    # mirror — niftyindices.com intermittently rate-limits/hangs
+    "https://nsearchives.nseindia.com/content/indices/",
+]
+
+
+def fetch_index_from_csv(universe: str) -> list[str]:
+    """Fetch official index constituents (niftyindices.com; NSE archives mirror fallback)."""
+    import io
+    import urllib.request
+
+    last_err: Exception = RuntimeError("no CSV host configured")
+    for host in INDEX_CSV_HOSTS:
+        # both hosts reject requests without a browser User-Agent
+        req = urllib.request.Request(
+            host + INDEX_CSV_FILES[universe],
+            headers={
+                "User-Agent": (
+                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+                )
+            },
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                df = pd.read_csv(io.BytesIO(resp.read()))
+            return [f"{s.strip().upper()}.NS" for s in df["Symbol"].dropna()]
+        except Exception as e:  # noqa: BLE001 — try the mirror before giving up
+            last_err = e
+    raise last_err
+
+
 def get_universe(universe: str, custom_tickers: str | None = None) -> list[str]:
     """Get stock universe tickers in yfinance format (.NS suffix)."""
     if universe == "custom" and custom_tickers:
         tickers = [t.strip().upper() for t in custom_tickers.split(",")]
         return [f"{t}.NS" for t in tickers if t]
+
+    # Prefer the official constituent CSVs for every standard universe. The
+    # niftystocks package bundles hardcoded snapshots that have drifted badly:
+    # as of 2026-07 only ~60% of its Nifty 500 names and 134/200 of its
+    # Nifty 200 names were still in the respective index.
+    if universe in INDEX_CSV_FILES:
+        try:
+            return fetch_index_from_csv(universe)
+        except Exception as e:
+            print(f"Warning: official CSV fetch failed ({e}). Trying niftystocks.", file=sys.stderr)
 
     try:
         from niftystocks import ns
@@ -43,25 +91,27 @@ def get_universe(universe: str, custom_tickers: str | None = None) -> list[str]:
         elif universe == "nifty200":
             return ns.get_nifty200_with_ns()
         elif universe == "nifty500":
-            return ns.get_nifty_total_market_with_ns()
+            return ns.get_nifty500_with_ns()
         else:
             return ns.get_nifty50_with_ns()
-    except ImportError:
-        # Fallback: Nifty 50 hardcoded core components
-        print("Warning: niftystocks package not available. Using hardcoded Nifty 50 list.", file=sys.stderr)
-        nifty50_core = [
-            "RELIANCE", "TCS", "HDFCBANK", "INFY", "ICICIBANK",
-            "BHARTIARTL", "ITC", "SBIN", "LT", "KOTAKBANK",
-            "HINDUNILVR", "AXISBANK", "BAJFINANCE", "MARUTI", "TATAMOTORS",
-            "SUNPHARMA", "TITAN", "HCLTECH", "NTPC", "POWERGRID",
-            "ULTRACEMCO", "ADANIENT", "ASIANPAINT", "TATASTEEL", "WIPRO",
-            "ONGC", "JSWSTEEL", "COALINDIA", "NESTLEIND", "BAJAJFINSV",
-            "M&M", "TECHM", "DRREDDY", "CIPLA", "EICHERMOT",
-            "APOLLOHOSP", "DIVISLAB", "BRITANNIA", "HEROMOTOCO", "INDUSINDBK",
-            "TATACONSUM", "HDFCLIFE", "SBILIFE", "BAJAJ-AUTO", "GRASIM",
-            "BPCL", "ADANIPORTS", "HINDALCO", "BEL", "TRENT",
-        ]
-        return [f"{t}.NS" for t in nifty50_core]
+    except Exception as e:
+        print(f"Warning: niftystocks universe fetch failed ({e}).", file=sys.stderr)
+
+    # Fallback: Nifty 50 hardcoded core components
+    print("Warning: falling back to hardcoded Nifty 50 list.", file=sys.stderr)
+    nifty50_core = [
+        "RELIANCE", "TCS", "HDFCBANK", "INFY", "ICICIBANK",
+        "BHARTIARTL", "ITC", "SBIN", "LT", "KOTAKBANK",
+        "HINDUNILVR", "AXISBANK", "BAJFINANCE", "MARUTI", "TATAMOTORS",
+        "SUNPHARMA", "TITAN", "HCLTECH", "NTPC", "POWERGRID",
+        "ULTRACEMCO", "ADANIENT", "ASIANPAINT", "TATASTEEL", "WIPRO",
+        "ONGC", "JSWSTEEL", "COALINDIA", "NESTLEIND", "BAJAJFINSV",
+        "M&M", "TECHM", "DRREDDY", "CIPLA", "EICHERMOT",
+        "APOLLOHOSP", "DIVISLAB", "BRITANNIA", "HEROMOTOCO", "INDUSINDBK",
+        "TATACONSUM", "HDFCLIFE", "SBILIFE", "BAJAJ-AUTO", "GRASIM",
+        "BPCL", "ADANIPORTS", "HINDALCO", "BEL", "TRENT",
+    ]
+    return [f"{t}.NS" for t in nifty50_core]
 
 
 def fetch_benchmark(period: str = "1y") -> pd.DataFrame:
