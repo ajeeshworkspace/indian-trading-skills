@@ -73,6 +73,30 @@ RSS_FEEDS = {
         "category": "Business",
         "tier": 2,
     },
+    "moneycontrol_buzzing": {
+        "url": "https://www.moneycontrol.com/rss/buzzingstocks.xml",
+        "source": "MoneyControl",
+        "category": "Stocks",
+        "tier": 2,
+    },
+    "moneycontrol_ipo": {
+        "url": "https://www.moneycontrol.com/rss/iponews.xml",
+        "source": "MoneyControl",
+        "category": "IPO",
+        "tier": 2,
+    },
+    "moneycontrol_economy": {
+        "url": "https://www.moneycontrol.com/rss/economy.xml",
+        "source": "MoneyControl",
+        "category": "Macro",
+        "tier": 2,
+    },
+    "moneycontrol_results": {
+        "url": "https://www.moneycontrol.com/rss/results.xml",
+        "source": "MoneyControl",
+        "category": "Earnings",
+        "tier": 2,
+    },
     "et_markets": {
         "url": "https://economictimes.indiatimes.com/markets/rssfeeds/1977021501.cms",
         "source": "Economic Times",
